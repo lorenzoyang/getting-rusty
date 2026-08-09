@@ -7,7 +7,26 @@
 
 ## References and Borrowing
 
-TODO
+### Stack vs Heap in generale
+
+Quando un programma viene caricato in memoria diventa un processo, e il processo vede la memoria come uno spazio di indirizzi tutto suo, lineare (è la *memoria virtuale*: saranno poi il sistema operativo e l'hardware a tradurre questi indirizzi in indirizzi fisici). Dentro questo spazio ci sono due aree, lo `stack` e l'`heap`, che non sono fatte di memoria diversa: si differenziano solo per il modo in cui vengono gestite.
+
+- **Stack:** il ciclo di vita delle chiamate di funzione segue proprio il principio LIFO (Last In, First Out): quando una funzione viene chiamata viene allocata la memoria necessaria al suo contesto di esecuzione (variabili locali, parametri, indirizzo di ritorno, ecc.), questo blocco si chiama *stack frame* e quando la funzione termina l'allocazione viene liberata, l'ultima funzione chiamata è la prima a terminare. Nasce così l'idea di applicare il principio LIFO per gestire la memoria, e l'area di memoria gestita in questo modo viene chiamata stack. Allocare e liberare qui costa pochissimo: basta spostare avanti o indietro un puntatore (lo *stack pointer*).
+
+  - La memoria viene quindi allocata quando la funzione viene chiamata e liberata quando la funzione termina, e da qui viene fuori un nuovo problema: e se avessi bisogno di dati che sopravvivono alla funzione che li ha creati, cioè di dati con una lifetime più lunga della chiamata di funzione in questione? In tal caso serve un'area di memoria che non sia gestita in maniera LIFO, ed è proprio questa l'area che viene chiamata heap.
+
+  - Inoltre, quando la funzione viene chiamata, il frame corrispondente viene allocato e pushato in cima allo stack. Supponiamo che durante l'esecuzione ci sia, per esempio, un array di 10 elementi e che tale array debba crescere ancora: ecco che viene fuori un altro problema. Il frame viene allocato alla chiamata della funzione con una dimensione fissa e, poiché si segue il LIFO, sopra di esso potrebbe esserci già un altro frame appena pushato, quindi il frame non può crescere: è bloccato lì dentro. Non posso quindi tenere un array di dimensione dinamica direttamente nel frame. Anche qui viene fuori l'idea di avere un'area di memoria indipendente dallo stack: nel frame metto un valore di dimensione fissa, cioè l'indirizzo di un'area di memoria dinamica, e tale indirizzo è proprio il concetto di puntatore. Così si riesce ad avere un array di dimensione dinamica pur restando dentro un frame di dimensione fissa nell'area stack.
+
+    > Nota: qualche linguaggio permette di far crescere il frame a runtime (per esempio `alloca` o i VLA in C), ma solo finché quel frame è in cima allo stack. In Rust questo non esiste: la dimensione di ogni frame è nota a compile time, ed è per questo che il compilatore vuole conoscere la size di ogni tipo, oppure ci obbliga a metterlo dietro un puntatore come `Box<T>`.
+
+  - Nota: lo stack ha anche una dimensione massima fissata, e ogni thread ha il suo (tipicamente 8 MiB per il thread principale su Linux, 2 MiB per i thread creati con `thread::spawn`). Superarla significa *stack overflow*.
+
+- **Heap:** è l'area di memoria nata proprio per risolvere i problemi suddetti. Qui la memoria non viene allocata e liberata automaticamente con push e pop, ma viene allocata su richiesta, ottenendo un puntatore all'area di memoria allocata, e poi, quando non serve più, viene liberata sempre su richiesta. Gestire quest'area è più costoso rispetto allo stack: l'allocatore deve cercare un blocco libero abbastanza grande, tenere traccia di ciò che è occupato e di ciò che è libero, ed eventualmente chiedere altra memoria al sistema operativo. Anche l'accesso ai dati tende a costare di più, non perché leggere l'heap sia di per sé più lento, ma perché prima bisogna seguire un puntatore e perché i dati sono sparsi, quindi si sfrutta peggio la cache della CPU. In compenso i dati allocati nell'heap sopravvivono alla chiamata della funzione che li ha creati, finché non vengono liberati.
+
+  - E qui arriva il punto di Rust: quel "finché non vengono liberati" in C significherebbe una `free()` scritta a mano (dimenticarla = memory leak, farla due volte = double free), mentre in Rust ogni valore nell'heap ha un *owner*, e la deallocazione viene inserita dal compilatore alla fine dello scope dell'owner. Niente garbage collector e niente `free()` manuale: è esattamente il problema che il concetto di ownership viene a risolvere.
+
+  - Per esempio, un `Vec<T>` non è altro che una struct di dimensione fissa che sta nel frame (puntatore ai dati + length + capacity) e che punta a un buffer nell'heap: quando il `Vec` cresce oltre la sua capacity cambia il buffer nell'heap, mentre la struct nello stack resta sempre della stessa dimensione.
+
 
 ## Lifetimes
 
