@@ -1,5 +1,10 @@
 # Enums
 
+> Le riflessioni di un principiante di Rust.
+>
+> Capitoli coinvolti: 06
+
+
 Sum type, product type, union type e discriminated union.
 
 ## Sum type

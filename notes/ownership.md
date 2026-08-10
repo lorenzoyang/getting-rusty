@@ -2,7 +2,7 @@
 
 > Le riflessioni di un principiante di Rust.
 >
-> Capitoli coinvolti: 04, 10, 15
+> Capitoli coinvolti: 04
 
 
 ## References and Borrowing
