@@ -20,6 +20,10 @@ name = "ch03-common-concepts"
 version = "0.1.0"
 
 [[package]]
+name = "ch08-exercises"
+version = "0.1.0"
+
+[[package]]
 name = "demo"
 version = "0.1.0"
 
