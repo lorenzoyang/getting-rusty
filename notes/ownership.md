@@ -30,7 +30,112 @@ Quando un programma viene caricato in memoria diventa un processo, e il processo
 
 ## Lifetimes
 
-TODO
+- **borrowing** = l'operazione/relazione con cui si prende in prestito un valore, cioè si accede temporaneamente a esso senza prenderne l'ownership;
+
+- **reference** = il valore attraverso cui si accede al dato preso in prestito.
+
+```rust
+fn foo<'s>(&'s self)
+````
+
+> `&'s self` è quindi un riferimento a `self`; tramite questo riferimento, `self` rimane borrowed per la regione in cui quel riferimento deve essere valido, rappresentata da `'s`.
+
+- I **lifetime parameters** non sono un meccanismo completamente separato dal sistema dei generics. Un lifetime parameter è infatti un parametro generico, come `'a` o `'s`. Non è però un parametro di tipo come `T`: invece di rappresentare un tipo qualsiasi, funziona come un **placeholder per una regione di validità dei riferimenti**.
+
+  Quindi:
+
+  ```rust
+  fn foo<T>(x: T)
+  ```
+
+  usa un parametro generico di tipo, mentre:
+
+  ```rust
+  fn foo<'a>(x: &'a str)
+  ```
+
+  usa un parametro generico di lifetime.
+
+  Si può quindi ragionare così:
+
+  ```text
+  T   → placeholder per un tipo
+  'a  → placeholder per una regione di validità
+  ```
+
+  Quando una funzione che usa lifetime parameters viene chiamata, il compilatore determina quali regioni concrete possono soddisfare quei parametri e le relazioni espresse dalla firma, in modo analogo a come un generic type parameter viene istanziato con un tipo concreto.
+
+  È importante però non identificare necessariamente una lifetime con uno scope lessicale: soprattutto con NLL, la regione associata a una lifetime può essere più piccola di un intero blocco.
+
+  Inoltre, a differenza dei generic type parameters, i lifetime parameters non causano la monomorfizzazione del codice: servono al controllo statico effettuato dal borrow checker e non producono versioni runtime differenti della funzione.
+
+- I **lifetime parameters e le relative annotazioni sui riferimenti** non modificano il comportamento runtime del programma e, soprattutto, non fanno vivere più a lungo né i dati né i riferimenti. Servono invece a descrivere al compilatore le relazioni tra la validità di più riferimenti.
+
+  In altre parole: non dicono al compilatore quanto deve far vivere un dato; gli dicono quali relazioni devono esistere tra i riferimenti affinché il programma sia valido.
+
+  Questo permette al borrow checker di garantire che un riferimento non venga utilizzato quando il dato a cui punta non esiste più, evitando quindi i dangling references.
+
+  Quando un valore raggiunge il proprio `drop scope`, Rust esegue il suo distruttore. Se il tipo implementa `Drop`, viene chiamato `Drop::drop`; inoltre il compilatore genera automaticamente la cosiddetta *drop glue* necessaria a distruggere correttamente i valori contenuti.
+
+- È meglio non dire semplicemente che "ogni variabile ha un lifetime". Più precisamente, ogni riferimento ha una lifetime, cioè una regione durante la quale deve essere valido. Si può ragionare informalmente così:
+  - valori/variabili normali → hanno un periodo durante il quale esistono e sono accessibili, determinato anche dai loro scope e drop scope;
+  - riferimenti → hanno una regione durante la quale devono rimanere validi.
+
+  I lifetime parameters, come `'a`, servono a esprimere genericamente queste relazioni di validità.
+
+  I valori normali non vengono annotati con lifetime parameters come `'a`, ma hanno comunque una regione di esistenza/validità che il compilatore conosce. I riferimenti hanno lifetimes, e il borrow checker verifica che tali lifetimes non oltrepassino la validità dei dati referenziati.
+
+- Il lifetime di un riferimento è la regione del programma durante la quale quel riferimento deve rimanere valido. Con NLL (*Non-Lexical Lifetimes*), questa regione può terminare all'ultimo uso effettivo del riferimento, senza necessariamente arrivare fino alla fine del blocco lessicale.
+
+- Con NLL, Rust non considera automaticamente un borrow attivo fino alla fine del blocco in cui è stato creato. Il borrow checker analizza gli usi effettivi del riferimento e il control flow e mantiene il borrow soltanto nella regione in cui il riferimento deve ancora essere valido. Per esempio:
+
+  ```rust
+  let mut data = vec![1, 2, 3];
+
+  let x = &data[0];
+
+  println!("{x}"); // ultimo utilizzo di x
+
+  data.push(4); // OK: il borrow precedente non serve più
+  ```
+
+  Anche se la variabile `x` appartiene ancora allo scope, il riferimento contenuto in `x` non viene più utilizzato dopo `println!`, quindi il borrow può terminare prima della fine del blocco.
+
+```rust
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+```
+
+Si può leggere questa firma in modo intuitivo così:
+
+> Dammi due riferimenti.
+>
+> Io posso restituire un riferimento proveniente da uno dei due.
+>
+> Il riferimento restituito sarà considerato valido soltanto per una lifetime `'a` per la quale entrambi gli input possono essere considerati validi.
+
+Attenzione: `'a` **NON significa necessariamente che `x` e `y` abbiano esattamente la stessa lifetime concreta**.
+
+```rust
+x: &'a str
+y: &'a str
+```
+
+significa piuttosto che entrambi i riferimenti devono essere validi almeno per `'a`.
+
+Il compilatore può quindi determinare una `'a` compatibile con entrambi gli input. Intuitivamente, quando i due riferimenti hanno durate diverse, `'a` non può estendersi oltre la regione per la quale entrambi possono essere considerati validi.
+
+Di conseguenza:
+
+> Il risultato non può essere considerato valido più a lungo della lifetime che il compilatore può garantire per entrambi gli input.
+
+Questo è necessario perché la funzione potrebbe restituire `x` oppure `y`, e chi la chiama non può sapere quale dei due riferimenti verrà restituito.
+
 
 ## The Slice Type
 
