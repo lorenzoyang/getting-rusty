@@ -8,276 +8,294 @@
 
 ---
 
-## Come strutturare i progetti Rust
+# Come strutturare i progetti Rust
 
-- **package**
-  - Un package deve contenere almeno un crate.
-  - Può contenere:
-    - zero o più **binary crate**;
-    - al massimo un **library crate**.
+## Package
 
-  - Il crate root predefinito del binary principale è `src/main.rs`, mentre quello del library crate è `src/lib.rs`.
+Un package deve contenere almeno un crate.
 
-  - Se un package contiene più binary crate, quelli aggiuntivi possono essere messi nella cartella `src/bin/`. Ogni file `.rs` direttamente dentro questa cartella viene considerato un binary crate separato.
+Può contenere:
 
-  - Se si vuole creare un binary crate composto da più file, cioè con dei propri moduli, si può creare una cartella con il nome del binary dentro `src/bin/` e inserire al suo interno un file `main.rs` insieme agli altri moduli `.rs`.
+- zero o più **binary crate**;
+- al massimo un **library crate**.
 
-  - `main.rs` e `lib.rs` sono i crate root predefiniti, non necessariamente i nomi dei crate. Cargo determina automaticamente i nomi dei target in base al package, ai file o alle directory, ma è possibile configurare esplicitamente nomi e percorsi tramite `Cargo.toml`.
+Il crate root predefinito del binary principale è `src/main.rs`, mentre quello del library crate è `src/lib.rs`.
 
-  Una possibile struttura comune è:
+Se un package contiene più binary crate, quelli aggiuntivi possono essere messi nella cartella `src/bin/`. Ogni file `.rs` direttamente dentro questa cartella viene considerato un binary crate separato.
 
-  ```text
-  src/
-  ├── main.rs
-  ├── lib.rs
-  ├── module1.rs
-  ├── module2.rs
-  └── bin/
-      ├── binary1.rs
-      └── binary2/
-          ├── main.rs
-          └── module.rs
+Se si vuole creare un binary crate composto da più file, cioè con dei propri moduli, si può creare una cartella con il nome del binary dentro `src/bin/` e inserire al suo interno un file `main.rs` insieme agli altri moduli `.rs`.
 
-  tests/
-  ├── common/
-  │   └── mod.rs
-  ├── integration_test1.rs
-  ├── integration_test2.rs
-  └── ...
-  ```
+`main.rs` e `lib.rs` sono i crate root predefiniti, non necessariamente i nomi dei crate. Cargo determina automaticamente i nomi dei target in base al package, ai file o alle directory, ma è possibile configurare esplicitamente nomi e percorsi tramite `Cargo.toml`.
 
-  I file come `module1.rs` e `module2.rs` non diventano automaticamente dei moduli: devono essere dichiarati nella module tree, per esempio con:
+Una possibile struttura comune è:
 
-  ```rust
-  mod module1;
-  ```
+```text
+src/
+├── main.rs
+├── lib.rs
+├── module1.rs
+├── module2.rs
+└── bin/
+    ├── binary1.rs
+    └── binary2/
+        ├── main.rs
+        └── module.rs
 
-  ### Integration test
+tests/
+├── common/
+│   └── mod.rs
+├── integration_test1.rs
+├── integration_test2.rs
+└── ...
+```
 
-  I file `.rs` direttamente dentro la cartella `tests/` vengono compilati da Cargo come **crate separati**.
+I file come `module1.rs` e `module2.rs` non diventano automaticamente dei moduli: devono essere dichiarati nella module tree, per esempio con:
 
-  Per esempio:
+```rust
+mod module1;
+```
 
-  ```text
-  tests/
-  ├── integration_test1.rs
-  └── integration_test2.rs
-  ```
+### Integration test
 
-  corrisponde concettualmente a:
+I file `.rs` direttamente dentro la cartella `tests/` vengono compilati da Cargo come **crate separati**.
 
-  ```text
-  integration_test1.rs → integration test crate 1
-  integration_test2.rs → integration test crate 2
-  ```
+Per esempio:
 
-  Questo è importante perché gli integration test vengono compilati come codice esterno rispetto al library crate che stanno testando. Possono quindi utilizzare la sua **public API**, ma non accedere direttamente ai suoi elementi privati.
+```text
+tests/
+├── integration_test1.rs
+└── integration_test2.rs
+```
 
-  Per esempio:
+corrisponde concettualmente a:
 
-  ```rust
-  use my_crate::some_public_function;
+```text
+integration_test1.rs → integration test crate 1
+integration_test2.rs → integration test crate 2
+```
 
-  #[test]
-  fn some_test() {
-      assert!(some_public_function());
-  }
-  ```
+Questo è importante perché gli integration test vengono compilati come codice esterno rispetto al library crate che stanno testando. Possono quindi utilizzare la sua **public API**, ma non accedere direttamente ai suoi elementi privati.
 
-  Un integration test non può invece importare direttamente le funzioni interne di un binary crate come se questo fosse una library.
+Per esempio:
 
-  È comunque possibile fare integration test del comportamento di un binary eseguendo il programma e verificandone input, output, exit status, ecc.
+```rust
+use my_crate::some_public_function;
 
-  Tuttavia, se si vuole testare direttamente la logica principale dell'applicazione, un approccio molto utile è spostare tale logica nel library crate del package e lasciare il binary crate come un semplice wrapper che si occupa principalmente di avviare il programma.
+#[test]
+fn some_test() {
+    assert!(some_public_function());
+}
+```
 
-  In questo modo:
+Un integration test non può invece importare direttamente le funzioni interne di un binary crate come se questo fosse una library.
 
-  ```text
-  main.rs
-      ↓
-  public API di lib.rs
-      ↓
-  logica principale
-  ```
+È comunque possibile fare integration test del comportamento di un binary eseguendo il programma e verificandone input, output, exit status, ecc.
 
-  Gli integration test possono quindi utilizzare la public API del library crate per testare direttamente la logica principale dell'applicazione.
+Tuttavia, se si vuole testare direttamente la logica principale dell'applicazione, un approccio molto utile è spostare tale logica nel library crate del package e lasciare il binary crate come un semplice wrapper che si occupa principalmente di avviare il programma.
 
-  ### Codice di supporto condiviso tra integration test
+In questo modo:
 
-  Anche se ogni file `.rs` direttamente dentro `tests/` rappresenta un integration test crate separato, è possibile creare del **codice di supporto condiviso** da utilizzare in più integration test crate.
+```text
+main.rs
+    ↓
+public API di lib.rs
+    ↓
+logica principale
+```
 
-  Per esempio, se più test devono eseguire la stessa preparazione iniziale, si può creare:
+Gli integration test possono quindi utilizzare la public API del library crate per testare direttamente la logica principale dell'applicazione.
 
-  ```text
-  tests/
-  ├── common/
-  │   └── mod.rs
-  ├── user_tests.rs
-  └── product_tests.rs
-  ```
-  (Nota: è praticamente il vecchio sistema Rust per organizzare i moduli, dentro tests/ si usa intenzionalmente la vecchia convenzione. È come dire: Uso il vecchio sistema dei moduli per aggirare la regola speciale di Cargo sui file direttamente dentro tests/.)
+### Codice di supporto condiviso tra integration test
 
-  (Nota: con il nuovo sistema dei moduli, `tests/common.rs` può comunque essere usato come modulo dagli altri integration test tramite `mod common;`, ma Cargo lo considera contemporaneamente anche un integration test target autonomo, perché si trova direttamente nella directory tests/. Per questo motivo si preferisce `tests/common/mod.rs`, che può essere incluso come modulo dagli integration test senza essere automaticamente considerato da Cargo un integration test target separato.)
+Anche se ogni file `.rs` direttamente dentro `tests/` rappresenta un integration test crate separato, è possibile creare del **codice di supporto condiviso** da utilizzare in più integration test crate.
 
-  Dentro `tests/common/mod.rs` si possono definire funzioni di supporto:
+Per esempio, se più test devono eseguire la stessa preparazione iniziale, si può creare:
 
-  ```rust
-  pub fn setup() {
-      // preparazione comune ai test
-  }
-  ```
+```text
+tests/
+├── common/
+│   └── mod.rs
+├── user_tests.rs
+└── product_tests.rs
+```
 
-  Ogni integration test crate che vuole utilizzare questo codice deve dichiarare esplicitamente il modulo:
+> **Nota:** questa struttura usa intenzionalmente la convenzione `mod.rs`, tipica del vecchio sistema di organizzazione dei moduli di Rust. In questo caso è utile perché permette di evitare la regola speciale di Cargo secondo cui i file `.rs` direttamente dentro `tests/` vengono considerati integration test target.
 
-  ```rust
-  // tests/user_tests.rs
+Con il sistema dei moduli più moderno, `tests/common.rs` può comunque essere usato come modulo dagli altri integration test tramite `mod common;`. Tuttavia, Cargo lo considera contemporaneamente anche un integration test target autonomo, proprio perché si trova direttamente nella directory `tests/`.
 
-  mod common;
+Per questo motivo si preferisce:
 
-  #[test]
-  fn create_user() {
-      common::setup();
+```text
+tests/common/mod.rs
+```
 
-      // ...
-  }
-  ```
+che può essere incluso come modulo dagli integration test senza essere automaticamente considerato da Cargo un integration test target separato.
 
-  e allo stesso modo:
+Dentro `tests/common/mod.rs` si possono definire funzioni di supporto:
 
-  ```rust
-  // tests/product_tests.rs
+```rust
+pub fn setup() {
+    // preparazione comune ai test
+}
+```
 
-  mod common;
+Ogni integration test crate che vuole utilizzare questo codice deve dichiarare esplicitamente il modulo.
 
-  #[test]
-  fn create_product() {
-      common::setup();
+Per esempio:
 
-      // ...
-  }
-  ```
+```rust
+// tests/user_tests.rs
 
-  È importante capire che `common` **non è un crate separato condiviso tra gli integration test**.
+mod common;
 
-  `user_tests.rs` e `product_tests.rs` rimangono due crate distinti:
+#[test]
+fn create_user() {
+    common::setup();
+    // ...
+}
+```
 
-  ```text
-  user_tests crate
-  ├── common module
-  └── tests
+e allo stesso modo:
 
-  product_tests crate
-  ├── common module
-  └── tests
-  ```
+```rust
+// tests/product_tests.rs
 
-  Entrambi includono un modulo `common` utilizzando lo stesso file sorgente `tests/common/mod.rs`.
+mod common;
 
-  In altre parole, `mod common;` dice a ciascun integration test crate di aggiungere `common` alla propria module tree.
+#[test]
+fn create_product() {
+    common::setup();
+    // ...
+}
+```
 
-  Le funzioni di `common` che devono essere chiamate dal test devono avere una visibilità appropriata, per esempio:
+È importante capire che `common` **non è un crate separato condiviso tra gli integration test**.
 
-  ```rust
-  pub fn setup() {
-      // ...
-  }
-  ```
+`user_tests.rs` e `product_tests.rs` rimangono due crate distinti:
 
-  oppure, se si vuole limitarne la visibilità al crate di test:
+```text
+user_tests crate
+├── common module
+└── tests
 
-  ```rust
-  pub(crate) fn setup() {
-      // ...
-  }
-  ```
+product_tests crate
+├── common module
+└── tests
+```
 
-  È preferibile usare:
+Entrambi includono un modulo `common` utilizzando lo stesso file sorgente `tests/common/mod.rs`.
 
-  ```text
-  tests/common/mod.rs
-  ```
+In altre parole, `mod common;` dice a ciascun integration test crate di aggiungere `common` alla propria module tree.
 
-  invece di:
+Le funzioni di `common` che devono essere chiamate dal test devono avere una visibilità appropriata, per esempio:
 
-  ```text
-  tests/common.rs
-  ```
+```rust
+pub fn setup() {
+    // ...
+}
+```
 
-  perché Cargo considera normalmente ogni file `.rs` direttamente dentro `tests/` come un integration test target separato.
+oppure, se si vuole limitarne la visibilità al crate di test:
 
-  Quindi, usando:
+```rust
+pub(crate) fn setup() {
+    // ...
+}
+```
 
-  ```text
-  tests/
-  ├── common.rs
-  ├── user_tests.rs
-  └── product_tests.rs
-  ```
+È quindi preferibile usare:
 
-  Cargo interpreterebbe anche `common.rs` come un integration test crate autonomo, nonostante contenga soltanto funzioni di supporto.
+```text
+tests/common/mod.rs
+```
 
-  Potrebbe quindi comparire durante `cargo test` qualcosa come:
+invece di:
 
-  ```text
-  Running tests/common.rs
+```text
+tests/common.rs
+```
 
-  running 0 tests
-  ```
+perché Cargo considera normalmente ogni file `.rs` direttamente dentro `tests/` come un integration test target separato.
 
-  Mettendo invece il modulo dentro una sottocartella:
+Quindi, usando:
 
-  ```text
-  tests/common/mod.rs
-  ```
+```text
+tests/
+├── common.rs
+├── user_tests.rs
+└── product_tests.rs
+```
 
-  non viene trattato come integration test crate autonomo e può essere importato dagli altri test tramite:
+Cargo interpreterebbe anche `common.rs` come un integration test crate autonomo, nonostante contenga soltanto funzioni di supporto.
 
-  ```rust
-  mod common;
-  ```
+Durante `cargo test` potrebbe quindi comparire qualcosa come:
 
-  Il modulo `common` può a sua volta essere suddiviso in altri moduli se il codice di supporto diventa più complesso. Per esempio:
+```text
+Running tests/common.rs
 
-  ```text
-  tests/
-  ├── common/
-  │   ├── mod.rs
-  │   ├── database.rs
-  │   └── fixtures.rs
-  ├── user_tests.rs
-  └── product_tests.rs
-  ```
+running 0 tests
+```
 
-  In `common/mod.rs`:
+Mettendo invece il modulo dentro una sottocartella:
 
-  ```rust
-  pub mod database;
-  pub mod fixtures;
-  ```
+```text
+tests/common/mod.rs
+```
 
-  Quindi il codice di supporto dei test può essere organizzato con il normale module system di Rust, senza trasformare ogni file di supporto in un integration test crate separato.
+non viene trattato come integration test crate autonomo e può essere importato dagli altri test tramite:
 
-  ### Unit test
+```rust
+mod common;
+```
 
-  Gli **unit test**, invece, fanno parte dello stesso crate del codice che stanno testando.
+Il modulo `common` può a sua volta essere suddiviso in altri moduli se il codice di supporto diventa più complesso.
 
-  Per convenzione vengono spesso inseriti in un sottomodulo:
+Per esempio:
 
-  ```rust
-  #[cfg(test)]
-  mod tests {
-      use super::*;
+```text
+tests/
+├── common/
+│   ├── mod.rs
+│   ├── database.rs
+│   └── fixtures.rs
+├── user_tests.rs
+└── product_tests.rs
+```
 
-      #[test]
-      fn some_test() {
-          // ...
-      }
-  }
-  ```
+In `common/mod.rs`:
 
-  Poiché il modulo `tests` è un sottomodulo del modulo da testare, può accedere anche ai suoi elementi privati. Per questo motivo gli unit test sono adatti anche a testare dettagli interni che non fanno parte della public API.
+```rust
+pub mod database;
+pub mod fixtures;
+```
 
-- **workspace: TODO**
+Il codice di supporto dei test può quindi essere organizzato con il normale module system di Rust, senza trasformare ogni file di supporto in un integration test crate separato.
+
+### Unit test
+
+Gli **unit test**, invece, fanno parte dello stesso crate del codice che stanno testando.
+
+Per convenzione vengono spesso inseriti in un sottomodulo:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn some_test() {
+        // ...
+    }
+}
+```
+
+Poiché il modulo `tests` è un sottomodulo del modulo da testare, può accedere anche ai suoi elementi privati.
+
+Per questo motivo gli unit test sono adatti anche a testare dettagli interni che non fanno parte della public API.
+
+## Workspace
+
+TODO
 
 ---
 
