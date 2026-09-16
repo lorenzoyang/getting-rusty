@@ -50,7 +50,15 @@ impl Config {
         let query = args[1].clone();
         let file_path = args[2].clone();
 
-        let ignore_case = env::var("IGNORE_CASE").is_ok();
+        let ignore_case = if args.len() == 4 {
+            match args[3].as_str() {
+                "--ignore-case" => true,
+                "--case-sensitive" => false,
+                _ => return Err("Invalid argument for case sensitivity"),
+            }
+        } else {
+            env::var("IGNORE_CASE").is_ok()
+        };
 
         Ok(Config {
             query,
