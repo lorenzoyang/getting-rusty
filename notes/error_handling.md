@@ -4,6 +4,7 @@
 >
 > Capitoli coinvolti: 09
 
+
 ## 1. Eccezioni vs. errori come valori
 
 - In molti linguaggi orientati agli oggetti molto diffusi, come Java, C# e Python, gli errori sono gestiti con il meccanismo delle eccezioni (`exception`), che usa **lo stesso strumento** sia per gli errori attesi e recuperabili sia per i bug veri e propri, cioè quelli non recuperabili se non modificando il codice stesso. *(Precisazione: Java una distinzione ce l'ha: `Error` per i guasti irrecuperabili come `OutOfMemoryError`, `Exception` per il resto, e checked vs. unchecked, ma il **meccanismo** di lancio e cattura resta identico per tutti, quindi a livello di linguaggio le due categorie non sono realmente separate.)*
@@ -39,6 +40,7 @@
   - se è `Err(e)`, esegue un **return anticipato** con `Err(From::from(e))`, cioè converte anche
     il tipo di errore.
   Funziona anche su `Option` (dove `None` provoca il return anticipato di `None`) e, più in generale, in qualunque funzione il cui tipo di ritorno implementi il trait `Try`.
+
 
 ## 4. Perché le checked exception di Java sono considerate un errore di progettazione, mentre il `Result` di Rust no?
 

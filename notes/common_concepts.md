@@ -4,6 +4,7 @@
 >
 > Capitoli coinvolti: 03
 
+
 ## Unit Type
 
 Rust è un linguaggio prevalentemente orientato alle espressioni (*mostly expression-oriented*): quasi tutti i costrutti sono espressioni e quindi producono un valore. Il punto e virgola non "restituisce" niente: trasforma un'espressione in uno **statement** e ne **scarta** il valore. Di conseguenza un blocco `{ ... }` vale il valore della sua ultima espressione, oppure `()` se il suo ultimo elemento è uno statement (cioè se termina con `;`).

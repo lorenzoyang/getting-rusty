@@ -1,8 +1,8 @@
-# Ownership
+# Ownership e lifetime
 
 > Le riflessioni di un principiante di Rust.
 >
-> Capitoli coinvolti: 04
+> Capitoli coinvolti: 04, 10
 
 
 ## References and Borrowing

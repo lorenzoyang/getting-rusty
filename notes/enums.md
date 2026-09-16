@@ -7,6 +7,7 @@
 
 Sum type, product type, union type e discriminated union.
 
+
 ## Sum type
 
 `enum` in Rust non è semplicemente una lista di costanti come nei linguaggi classici (C, C++, Java), ma è un **sum type**, cioè un tipo che esprime una scelta tra più alternative. La scelta deve essere una sola: un valore non può stare in due varianti contemporaneamente.
@@ -23,6 +24,7 @@ Il sum type ha quindi soltanto due forme: `A` oppure `B`.
 
 > **Sull'`enum` degli "altri linguaggi".** In C e C++ l'`enum` è davvero una lista di costanti intere. In Java è già qualcosa di più (ogni costante è un oggetto, con campi e metodi propri), ma resta un insieme fisso di *istanze dello stesso tipo*: le costanti non possono portare payload di tipo diverso l'una dall'altra. È esattamente questo che manca perché sia un sum type.
 
+
 ## Product type
 
 Dall'altra parte, come le classi in Java o le `struct` di Rust, abbiamo i **product type**, cioè un tipo che esprime una combinazione di più valori: tutti i valori devono essere presenti contemporaneamente.
@@ -32,6 +34,7 @@ struct S { a: bool, b: u8 }  // 2 * 256 = 512 valori
 ```
 
 Con il product type, la `struct` `S` ha 512 valori possibili e una forma sola: quella in cui sono presenti contemporaneamente sia `a` che `b`. Per questo un pattern che destruttura una `struct` è sempre esaustivo: non c'è nessun altro caso da coprire.
+
 
 ## Union type
 
@@ -44,6 +47,7 @@ type Value = string | number;
 Non ha un costruttore, non ha wrapping: una `string` è già di per sé un `Value`, quindi non c'è bisogno di fare prima pattern matching per trovare la forma voluta e poi estrarre il valore da quest'ultima.
 
 Lo union type è spesso **strutturale**, come in TypeScript, e non **nominale** come il sum type di Rust: in Rust `enum E { A(String), B(String) }` ha due varianti perfettamente distinte, perché il nome della variante è l'identità. Questo permette di dare significati diversi allo stesso tipo sottostante, come in `enum Id { Utente(String), Ordine(String) }`, cosa che in TypeScript richiede un tag esplicito. Inoltre TypeScript collassa i duplicati (`string | string` diventa `string`), mentre in Rust le due forme `A(String)` e `B(String)` sono distinte e rimangono tali.
+
 
 ## Discriminated union
 
@@ -73,6 +77,7 @@ type Shape =
 ```
 
 Quindi in Rust l'`enum` è detto anche discriminated union con tag imposto dal compilatore, mentre in TypeScript la discriminated union è un pattern che si può usare per simulare un sum type, ma il tag lo scrivo io.
+
 
 ## In Java
 
@@ -144,6 +149,7 @@ Anche in memoria la differenza è netta: in Java ogni variante è un oggetto sul
 
 **Il buco che resta: `null`.** Uno `Shape` in Java può comunque essere `null`, e il `switch` con pattern lancia `NullPointerException` se non lo gestisco (posso aggiungere `case null ->`, ma resta un caso in più che il tipo non dichiara). L'esaustività copre le forme che ho dichiarato, ma non quella variante invisibile che Java aggiunge a ogni tipo di riferimento. `sealed` recupera la chiusura, ma non toglie `null`: il tipo dichiarato continua a mentire. Ed è esattamente il problema che `Option` risolve in Rust — non perché sia una classe migliore di `Optional`, ma perché in Rust `null` non esiste più come alternativa.
 
+
 ## `Option`
 
 Come Rust toglie il valore `null` tenendo comunque il concetto.
@@ -165,6 +171,7 @@ Sono due tipi diversi, e il compilatore in questo caso ci aiuta impedendoci di f
 Quindi in Rust il sistema di tipi, insieme al compilatore, ci aiuta a prevenire il problema dell'accesso al valore nullo.
 
 - **Non è la classe, è la chiusura.** `Optional` in Java è la stessa idea, ma un `Optional` può a sua volta essere `null`, e niente impedisce di continuare a usare riferimenti nudi accanto ad esso. In Rust non c'è alternativa: se il tipo dice `T`, un valore di `T` c'è.
+
 
 ## `if let` e `let ... else`
 
