@@ -199,6 +199,76 @@ perché durante la risoluzione del metodo Rust considera progressivamente i tipi
 
 Lo stesso meccanismo può utilizzare anche il trait `Deref`. Se abbiamo quindi uno smart pointer che implementa `Deref<Target = Person>`, Rust può arrivare a considerare `Person` durante la ricerca del metodo.
 
+Un esempio interessante è quello di `String`.
+
+Supponiamo di avere:
+
+```rust
+let s = String::from("Hello");
+
+let length = s.len();
+```
+
+A prima vista potrebbe sembrare che `len()` sia un metodo definito direttamente su `String`. In realtà, il metodo `len()` che viene utilizzato è definito su `str`, mentre `String` implementa:
+
+```text
+Deref<Target = str>
+```
+
+Durante la risoluzione della chiamata:
+
+```rust
+s.len();
+```
+
+Rust parte quindi dal tipo del receiver, `String`, e cerca un metodo compatibile. Attraverso l'**autoderef**, il compilatore considera progressivamente anche i tipi ottenibili dereferenziando il receiver.
+
+Nel nostro caso possiamo rappresentare concettualmente il primo passaggio come:
+
+```text
+String
+  |
+  | autoderef tramite Deref
+  v
+str
+```
+
+Questo è possibile perché `String` implementa `Deref<Target = str>`.
+
+Se utilizzassimo esplicitamente l'operatore di dereferenziazione `*`, avremmo concettualmente:
+
+```rust
+*s
+```
+
+che, per un tipo che implementa `Deref`, può essere pensato come:
+
+```rust
+*Deref::deref(&s)
+```
+
+Questo però è soltanto un modello mentale utile per capire il ruolo di `Deref`: durante la risoluzione di una chiamata a metodo non è necessario immaginare che il compilatore produca realmente un valore intermedio di tipo `str`.
+
+Una volta considerato `str`, Rust considera automaticamente anche le relative forme prese in prestito. Entra quindi in gioco l'**autoref**:
+
+```text
+String
+  |
+  | autoderef tramite Deref
+  v
+str
+  |
+  | autoref
+  v
+&str
+```
+
+Questo è importante perché `len()` richiede un receiver `&self`. Nel caso di `str`, quindi, il receiver necessario è sostanzialmente un `&str`.
+
+A questo punto il compilatore ha trovato un receiver compatibile e la risoluzione del metodo può essere completata.
+
+`str`, inoltre, è un tipo dinamicamente dimensionato (`?Sized`), quindi normalmente non viene utilizzato direttamente come valore locale: viene manipolato attraverso tipi come `&str`. Anche per questo è meglio pensare alla sequenza precedente come al processo di ricerca del metodo, e non come alla creazione concreta di un valore `str`.
+
 Perciò **deref coercion** e **autoderef/autoref** sono meccanismi collegati, ma non sono esattamente la stessa cosa.
 
 La **deref coercion** è una coercizione di tipo che permette, in determinati contesti, di trasformare automaticamente una reference come:
@@ -207,7 +277,31 @@ La **deref coercion** è una coercizione di tipo che permette, in determinati co
 &Box<String> -> &String -> &str
 ```
 
-L'**autoderef/autoref**, invece, fa parte soprattutto del processo con cui Rust cerca il metodo da chiamare sul receiver: il compilatore prova varie dereferenziazioni del receiver e considera automaticamente anche le relative forme `&T` e `&mut T`.
+Quando necessario, questa conversione utilizza le implementazioni di `Deref`.
+
+L'**autoderef/autoref**, invece, entra in gioco soprattutto durante la risoluzione delle chiamate ai metodi.
+
+Con l'**autoderef**, il compilatore considera progressivamente i tipi ottenibili dereferenziando il receiver. Queste dereferenziazioni possono essere native oppure possono utilizzare il trait `Deref`.
+
+Con l'**autoref**, il compilatore considera automaticamente anche forme come `&T` e `&mut T`, in modo da trovare un receiver compatibile con quello richiesto dal metodo.
+
+Possiamo quindi riassumere, come modello mentale:
+
+```text
+autoderef
+    -> method lookup
+    -> considera ripetute dereferenziazioni del receiver
+    -> può utilizzare Deref
+
+autoref
+    -> method lookup
+    -> considera anche &T e &mut T
+
+deref coercion
+    -> coercione automatica tra reference
+    -> per esempio &String -> &str
+    -> può utilizzare Deref
+```
 
 Entrambi i meccanismi contribuiscono allo stesso obiettivo generale: rendere reference e tipi che implementano `Deref` molto più naturali da utilizzare, evitando al programmatore di scrivere continuamente dereferenziazioni e borrow espliciti.
 
